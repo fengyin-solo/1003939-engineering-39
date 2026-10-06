@@ -5,7 +5,9 @@ export type EntryRow = {
   status: string
   pending: boolean
   abnormal: boolean
-  [field: string]: string | number | boolean
+  // 口径版本：这条记录的「未结/异常」按哪版规则解释，由迁移或业务动作落账。
+  ruleVersion?: string
+  [field: string]: string | number | boolean | undefined
 }
 
 export type ModuleMeta = {

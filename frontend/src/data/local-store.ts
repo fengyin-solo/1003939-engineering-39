@@ -54,6 +54,15 @@ export function resetRows(key: string): EntryRow[] {
   return rows
 }
 
+// 整批替换全部模块数据：只供迁移框架做事务提交/回滚用，业务代码不要调。
+export function replaceAllRows(rows: Record<string, EntryRow[]>): void {
+  const next = clone(rows)
+  cache = next
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+  }
+}
+
 export function storageKey(): string {
   return STORAGE_KEY
 }

@@ -1,9 +1,7 @@
-import { MODULE_BY_KEY } from '@/data/modules'
+import { CURRENT_RULE_VERSION, deriveState } from '@/data/caliber'
 import { allRows, listRows, resetRows, saveRows } from '@/data/local-store'
+import { MODULE_BY_KEY } from '@/data/modules'
 import type { ActionResult, EntryRow, ModuleMeta, OverviewResult, PageResult } from '@/data/types'
-
-// 会写进数据的「往回走」动作：命中就把这条记录标成异常态，看板上能一眼看出来。
-const NEGATIVE_ACTIONS = ['撤销', '作废', '拒绝', '驳回', '停用', '忽略', '下线', '回滚']
 
 export function moduleMeta(key: string): ModuleMeta {
   const meta = MODULE_BY_KEY.get(key)
@@ -23,8 +21,15 @@ export function filterRows(rows: EntryRow[], filters: Record<string, string>): E
   )
 }
 
+// 明细视图模型：未结/异常标记一律从口径层现算，与总览、导出同源，
+// 不信任行上存储的标记（历史行的旧标记只通过口径版本参与解释）。
+function toViewModel(row: EntryRow, meta: ModuleMeta): EntryRow {
+  return { ...row, ...deriveState(row, meta) }
+}
+
 export function listEntries(key: string, filters: Record<string, string> = {}): PageResult {
-  const matched = filterRows(listRows(key), filters)
+  const meta = moduleMeta(key)
+  const matched = filterRows(listRows(key), filters).map((row) => toViewModel(row, meta))
   return { items: matched, total: matched.length, page: 1, size: matched.length }
 }
 
@@ -43,13 +48,10 @@ export function runAction(key: string, id: number, action: string): ActionResult
   if (current === target) {
     return { ok: false, message: `${meta.entity}已经是「${target}」，不用重复操作` }
   }
-  const lastStatus = meta.statuses[meta.statuses.length - 1]
-  const updated: EntryRow = {
-    ...rows[index],
-    status: target,
-    pending: target !== lastStatus,
-    abnormal: NEGATIVE_ACTIONS.some((verb) => action.startsWith(verb)),
-  }
+  // 今天发生的新业务动作按现行口径落账：历史行一旦被新动作触碰，
+  // 就切到现行口径重算标记，历史未动的部分不受影响。
+  const updated: EntryRow = { ...rows[index], status: target, ruleVersion: CURRENT_RULE_VERSION }
+  Object.assign(updated, deriveState(updated, meta))
   const next = [...rows]
   next[index] = updated
   saveRows(key, next)
@@ -63,10 +65,21 @@ export function resetModule(key: string): PageResult {
 
 export function exportEntries(key: string): { filename: string; content: string } {
   const meta = moduleMeta(key)
-  const header = ['编号', ...meta.fields, '当前状态']
+  // 导出与总览、明细同源：未结/异常取自同一个口径函数，并带上口径版本便于对账。
+  const header = ['编号', ...meta.fields, '当前状态', '未结', '异常', '口径版本']
   const lines = [header.join(',')]
   for (const row of listRows(key)) {
-    lines.push([row.id, ...meta.fields.map((field) => row[field] ?? ''), row.status].join(','))
+    const derived = deriveState(row, meta)
+    lines.push(
+      [
+        row.id,
+        ...meta.fields.map((field) => row[field] ?? ''),
+        row.status,
+        derived.pending ? '是' : '否',
+        derived.abnormal ? '是' : '否',
+        row.ruleVersion ?? '',
+      ].join(','),
+    )
   }
   return { filename: `${meta.name}-清单.csv`, content: `\uFEFF${lines.join('\n')}` }
 }
@@ -88,11 +101,12 @@ export function loadOverview(): OverviewResult {
   const rows = allRows()
   const modules = [...MODULE_BY_KEY.values()].map((meta) => {
     const entries = rows[meta.key] ?? []
+    const derived = entries.map((row) => deriveState(row, meta))
     return {
       name: meta.name,
       created: entries.length,
-      pending: entries.filter((row) => row.pending).length,
-      abnormal: entries.filter((row) => row.abnormal).length,
+      pending: derived.filter((state) => state.pending).length,
+      abnormal: derived.filter((state) => state.abnormal).length,
     }
   })
   const cards = [
