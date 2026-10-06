@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('deformation')
 const columns = ["记录编号", "隐患点编号", "观测日期", "裂缝宽度", "水平位移量", "垂直位移量", "观测人", "记录状态"]
 const actions = ["提交校核", "确认校核", "标记异常"]
 const statuses = ["已观测", "待校核", "已校核", "异常值", "需复测"]
-const stats = [{"label": "本月观测次数", "value": 0}, {"label": "异常记录数", "value": 0}, {"label": "待校核记录", "value": 0}]
+const metricLabels = ["本月观测次数", "异常记录数", "待校核记录"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

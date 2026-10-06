@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('contract')
 const columns = ["单位编号", "单位名称", "资质等级", "联系人", "联系电话", "承建项目数", "注册日期", "单位状态"]
 const actions = ["暂停合作", "列入黑名单", "恢复正常"]
 const statuses = ["正常", "暂停合作", "列入黑名单", "资质过期", "已注销"]
-const stats = [{"label": "单位总数", "value": 0}, {"label": "正常合作数", "value": 0}, {"label": "黑名单数", "value": 0}]
+const metricLabels = ["单位总数", "正常合作数", "黑名单数"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

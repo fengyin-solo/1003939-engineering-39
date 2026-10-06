@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('propaganda')
 const columns = ["活动编号", "宣传主题", "宣传方式", "覆盖村组", "活动日期", "参与人数", "组织人", "活动状态"]
 const actions = ["开展活动", "确认完成", "取消活动"]
 const statuses = ["待开展", "进行中", "已完成", "已取消"]
-const stats = [{"label": "本月活动数", "value": 0}, {"label": "已完成数", "value": 0}, {"label": "覆盖人次", "value": 0}]
+const metricLabels = ["本月活动数", "已完成数", "覆盖人次"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

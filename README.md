@@ -25,7 +25,7 @@
 
 ```bash
 cd frontend
-npm install
+npm install      # 或使用 npm ci 按 package-lock.json 复现依赖
 npm run dev
 ```
 
@@ -69,3 +69,9 @@ npm run build
   `frontend/src/data/seed.ts`。
 - 状态流转只允许在 `local-service.ts` 里改，页面组件不做业务判断。
 - 想回到初始数据：清掉浏览器里 `geohazard-monitor-prevention:entries` 这一项，或调用 `resetModule(模块)`。
+
+## 数据迁移与口径一致性
+
+历史班次按业务发生日规则保留，2026-10-01 起的新记录使用显式未结状态；运营总览、明细卡片和 CSV 导出统一走
+`frontend/src/data/business-rules.ts` 与 `frontend/src/data/metrics.ts`。一次性迁移在前端初始化时幂等执行，
+诊断和整批回退策略见 [`docs/data-migration.md`](docs/data-migration.md)。

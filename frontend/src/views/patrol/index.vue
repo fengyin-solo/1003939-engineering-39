@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('patrol')
 const columns = ["巡查编号", "隐患点编号", "巡查日期", "巡查人员", "巡查范围", "发现异常", "处置措施", "巡查状态"]
 const actions = ["完成巡查", "报告异常", "确认处置"]
 const statuses = ["待巡查", "已巡查", "发现异常", "已处置"]
-const stats = [{"label": "本月巡查次数", "value": 0}, {"label": "发现异常数", "value": 0}, {"label": "待处置数", "value": 0}]
+const metricLabels = ["本月巡查次数", "发现异常数", "待处置数"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

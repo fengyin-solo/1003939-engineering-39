@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('acceptance')
 const columns = ["验收编号", "项目编号", "验收类型", "验收日期", "验收组成员", "验收结论", "整改意见", "验收状态"]
 const actions = ["启动验收", "确认通过", "要求整改"]
 const statuses = ["待验收", "验收中", "验收通过", "需整改", "已驳回"]
-const stats = [{"label": "待验收项目", "value": 0}, {"label": "通过项目数", "value": 0}, {"label": "整改中项目", "value": 0}]
+const metricLabels = ["待验收项目", "通过项目数", "整改中项目"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

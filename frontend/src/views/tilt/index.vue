@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('tilt')
 const columns = ["记录编号", "测点编号", "观测方向", "倾斜角度", "变化量", "累积倾斜量", "观测人", "记录状态"]
 const actions = ["提交校核", "确认校核", "触发报警"]
 const statuses = ["已观测", "待校核", "已校核", "超限报警", "需复测"]
-const stats = [{"label": "本月观测数", "value": 0}, {"label": "超限报警数", "value": 0}, {"label": "待校核数", "value": 0}]
+const metricLabels = ["本月观测数", "超限报警数", "待校核数"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

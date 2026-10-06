@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('training')
 const columns = ["培训编号", "培训主题", "培训对象", "培训日期", "授课人", "参训人数", "考核通过率", "培训状态"]
 const actions = ["开始授课", "完成授课", "组织考核"]
 const statuses = ["待开展", "授课中", "已完成", "已考核", "已归档"]
-const stats = [{"label": "年度培训次数", "value": 0}, {"label": "累计参训人数", "value": 0}, {"label": "考核通过率", "value": 0}]
+const metricLabels = ["年度培训次数", "累计参训人数", "考核通过率"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('crack')
 const columns = ["测点编号", "隐患点编号", "裂缝编号", "初始宽度", "当前宽度", "变化速率", "监测人", "测点状态"]
 const actions = ["记录数据", "标记加速", "确认稳定"]
 const statuses = ["正常", "加速发展", "趋于稳定", "已修复", "已废弃"]
-const stats = [{"label": "测点总数", "value": 0}, {"label": "加速发展数", "value": 0}, {"label": "正常测点数", "value": 0}]
+const metricLabels = ["测点总数", "加速发展数", "正常测点数"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

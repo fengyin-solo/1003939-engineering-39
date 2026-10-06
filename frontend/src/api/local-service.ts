@@ -1,9 +1,8 @@
+import { isAbnormal, isUnclosed } from '@/data/business-rules'
+import { allRows, appendRowHistory, listRows, migrationReports, resetRows, saveRows } from '@/data/local-store'
+import { moduleMetric, overviewFromRows } from '@/data/metrics'
 import { MODULE_BY_KEY } from '@/data/modules'
-import { allRows, listRows, resetRows, saveRows } from '@/data/local-store'
-import type { ActionResult, EntryRow, ModuleMeta, OverviewResult, PageResult } from '@/data/types'
-
-// 会写进数据的「往回走」动作：命中就把这条记录标成异常态，看板上能一眼看出来。
-const NEGATIVE_ACTIONS = ['撤销', '作废', '拒绝', '驳回', '停用', '忽略', '下线', '回滚']
+import type { ActionResult, EntryRow, MigrationReport, ModuleMeta, OverviewResult, PageResult } from '@/data/types'
 
 export function moduleMeta(key: string): ModuleMeta {
   const meta = MODULE_BY_KEY.get(key)
@@ -43,12 +42,13 @@ export function runAction(key: string, id: number, action: string): ActionResult
   if (current === target) {
     return { ok: false, message: `${meta.entity}已经是「${target}」，不用重复操作` }
   }
-  const lastStatus = meta.statuses[meta.statuses.length - 1]
+
+  const withHistory = appendRowHistory(rows[index], action, target)
   const updated: EntryRow = {
-    ...rows[index],
+    ...withHistory,
     status: target,
-    pending: target !== lastStatus,
-    abnormal: NEGATIVE_ACTIONS.some((verb) => action.startsWith(verb)),
+    pending: isUnclosed(key, withHistory),
+    abnormal: isAbnormal(key, withHistory),
   }
   const next = [...rows]
   next[index] = updated
@@ -61,14 +61,37 @@ export function resetModule(key: string): PageResult {
   return listEntries(key)
 }
 
+function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? '' : String(value)
+  return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
 export function exportEntries(key: string): { filename: string; content: string } {
   const meta = moduleMeta(key)
-  const header = ['编号', ...meta.fields, '当前状态']
-  const lines = [header.join(',')]
-  for (const row of listRows(key)) {
-    lines.push([row.id, ...meta.fields.map((field) => row[field] ?? ''), row.status].join(','))
+  const rows = listRows(key)
+  const header = ['编号', ...meta.fields, '当前状态', '未结事项', '异常', '业务日期', '规则版本', '时间线']
+  const lines = [header.map(csvCell).join(',')]
+  for (const row of rows) {
+    const timeline = (row.__timeline ?? [])
+      .map((event) => `${event.at ?? '历史'} ${event.action}→${event.status}${event.inferred ? '(补算)' : ''}`)
+      .join('；')
+    lines.push([
+      row.id,
+      ...meta.fields.map((field) => row[field] ?? ''),
+      row.status,
+      isUnclosed(key, row) ? '未结' : '已结',
+      isAbnormal(key, row),
+      row.__businessDate ?? '',
+      row.__ruleVersion ?? '',
+      timeline,
+    ].map(csvCell).join(','))
   }
-  return { filename: `${meta.name}-清单.csv`, content: `\uFEFF${lines.join('\n')}` }
+
+  const metric = moduleMetric(key, rows)
+  lines.push('')
+  lines.push(['统计口径', '总数', '未结事项', '已结事项', '异常量'].map(csvCell).join(','))
+  lines.push([meta.name, metric.created, metric.pending, metric.closed, metric.abnormal].map(csvCell).join(','))
+  return { filename: `${meta.name}-清单.csv`, content: `﻿${lines.join('\n')}` }
 }
 
 export function downloadEntries(key: string): void {
@@ -85,21 +108,9 @@ export function downloadEntries(key: string): void {
 }
 
 export function loadOverview(): OverviewResult {
-  const rows = allRows()
-  const modules = [...MODULE_BY_KEY.values()].map((meta) => {
-    const entries = rows[meta.key] ?? []
-    return {
-      name: meta.name,
-      created: entries.length,
-      pending: entries.filter((row) => row.pending).length,
-      abnormal: entries.filter((row) => row.abnormal).length,
-    }
-  })
-  const cards = [
-    { label: '业务模块', value: modules.length },
-    { label: '登记总量', value: modules.reduce((sum, item) => sum + item.created, 0) },
-    { label: '待处理', value: modules.reduce((sum, item) => sum + item.pending, 0) },
-    { label: '异常量', value: modules.reduce((sum, item) => sum + item.abnormal, 0) },
-  ]
-  return { cards, modules }
+  return overviewFromRows(allRows())
+}
+
+export function loadMigrationReports(): MigrationReport[] {
+  return migrationReports()
 }

@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('hazard')
 const columns = ["隐患点编号", "隐患点名称", "灾害类型", "所在乡镇", "经纬度坐标", "威胁户数", "威胁人口", "隐患状态"]
 const actions = ["纳入监测", "启动治理", "申请核销"]
 const statuses = ["在册", "监测中", "已治理", "已核销", "新增"]
-const stats = [{"label": "隐患点总数", "value": 0}, {"label": "监测中数量", "value": 0}, {"label": "已治理数量", "value": 0}]
+const metricLabels = ["隐患点总数", "监测中数量", "已治理数量"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

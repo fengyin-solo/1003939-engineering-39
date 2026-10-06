@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('rectification')
 const columns = ["任务编号", "验收编号", "整改内容", "责任单位", "整改期限", "整改措施", "复核人", "整改状态"]
 const actions = ["开始整改", "提交复核", "确认复核"]
 const statuses = ["待整改", "整改中", "已整改", "已复核", "逾期未改"]
-const stats = [{"label": "待整改数", "value": 0}, {"label": "整改中数", "value": 0}, {"label": "逾期未改数", "value": 0}]
+const metricLabels = ["待整改数", "整改中数", "逾期未改数"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)

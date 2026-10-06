@@ -79,13 +79,15 @@ import {
   moduleMeta,
   runAction as applyAction,
 } from '@/api/local-service'
+import { metricValue } from '@/data/metrics'
 import type { EntryRow } from '@/data/types'
 
 const meta = moduleMeta('evacuation')
 const columns = ["户号", "所属隐患点", "户主姓名", "家庭人口", "原住址", "安置方式", "安置地点", "搬迁状态"]
 const actions = ["签订协议", "完成搬迁", "确认安置"]
 const statuses = ["待动员", "已签约", "已搬迁", "已安置", "拒绝搬迁"]
-const stats = [{"label": "需搬迁户数", "value": 0}, {"label": "已搬迁户数", "value": 0}, {"label": "已安置户数", "value": 0}]
+const metricLabels = ["需搬迁户数", "已搬迁户数", "已安置户数"]
+const stats = computed(() => metricLabels.map((label) => ({ label, value: metricValue(label, rows.value, meta.key) })))
 
 const rows = ref<EntryRow[]>([])
 const total = ref(0)
